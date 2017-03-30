@@ -16,49 +16,56 @@
 import argparse
 import os
 
-home_dir = os.getenv("HOME")
+HOME_DIR = os.getenv("HOME")
 
-parser = argparse.ArgumentParser()
-parser.add_argument("profile", help="profile to set as default")
+def read_creds_file(filename):
+    """Returns the lines of the credentials file if it exists"""
+    try:
+        with open(HOME_DIR + '/.aws/' + filename, 'r') as curr_creds:
+            curr_creds_lines = curr_creds.readlines()
+        return curr_creds_lines
+    except IOError:
+        print 'credentials file does not exist!'
 
-args = parser.parse_args()
-profile_to_swap_to = args.profile
+def get_profile_to_swap_to():
+    """Parse the profile requested from user input"""
+    parser = argparse.ArgumentParser()
+    parser.add_argument("profile", help="profile to set as default")
+    args = parser.parse_args()
+    profile_to_swap_to = args.profile
+    creds_string = ''
+    for line in read_creds_file('credentials'):
+        creds_string += line
+    if '[' + profile_to_swap_to + ']\n' in creds_string:
+        return profile_to_swap_to
+    elif profile_to_swap_to == 'restore':
+        return 'restore'
+    else:
+        raise ValueError("The profile '{0!s}' is not in your credentials file.".format(profile_to_swap_to))
 
-profile_to_swap_to
-
-# Read the current credentials file
-with open(home_dir + '/.aws/credentials', 'r') as curr_creds:
-    curr_creds_lines = curr_creds.readlines()
-    # If no backup exists make one from the exisiting,
-    # just in case formatting is ikky and something breaks
-    if not os.path.exists(home_dir + '/.aws/credentials_backup'):
-        with open(home_dir + '/.aws/credentials_backup', 'w') as backup_file:
-            for line in curr_creds_lines:
+def add_backup_if_none_exists():
+    """Adds a backup creds file if none exists"""
+    if read_creds_file('credentials') and not os.path.exists(HOME_DIR + '/.aws/credentials_backup'):
+        with open(HOME_DIR + '/.aws/credentials_backup', 'w') as backup_file:
+            for line in read_creds_file('credentials'):
                 backup_file.write(line)
 
-# If passed in the "restore" arg
-# Restore the credentials from the backup
-if profile_to_swap_to == 'restore':
-    print 'restoring from credentials_backup'
-    with open(home_dir + '/.aws/credentials_backup', 'r') as backup_file:
-        backup_file_creds_lines = backup_file.readlines()
-        with open(home_dir + '/.aws/credentials', 'w') as curr_creds:
-            for line in backup_file_creds_lines:
-                curr_creds.write(line)
-else:
-    print 'Swapping to: ' + profile_to_swap_to
-    # Otherwise just swap the profile to the requested one
-    # Read through the file for the profile to swap to
-    with open(home_dir + '/.aws/credentials', 'r') as curr_creds:
-        curr_creds_lines = curr_creds.readlines()
-        # Go through and find the creds to swap to
-        for line in curr_creds_lines:
-            if line == '[' + profile_to_swap_to + ']\n':
-                access_key_id = curr_creds_lines[curr_creds_lines.index(line) + 1]
-                secret_key = curr_creds_lines[curr_creds_lines.index(line) + 2]
-    # Using the lines from the read write over the old file with new default
-    with open(home_dir + '/.aws/credentials', 'w') as curr_creds:
-        # Find line numbers of default to overwrite
+def restore_from_backup():
+    backup_file_creds_lines = read_creds_file('credentials_backup')
+    with open(HOME_DIR + '/.aws/credentials', 'w') as curr_creds:
+        for line in backup_file_creds_lines:
+            curr_creds.write(line)
+    print 'restored profile from backup'
+
+def swap_to_profile(profile):
+    curr_creds_lines = read_creds_file('credentials')
+    count = 0
+    for line in curr_creds_lines:
+        if line == '[' + profile + ']\n':
+            access_key_id = curr_creds_lines[count + 1]
+            secret_key = curr_creds_lines[count + 2]
+        count += 1
+    with open(HOME_DIR + '/.aws/credentials', 'w') as curr_creds:
         count = 0
         for line in curr_creds_lines:
             if line == '[default]\n':
@@ -70,3 +77,15 @@ else:
             else:
                 curr_creds.write(line)
             count += 1
+    print 'Success - Swapped profile to ' + profile
+
+def main():
+    add_backup_if_none_exists()
+    profile_to_swap_to = get_profile_to_swap_to()
+    if profile_to_swap_to == 'restore':
+        restore_from_backup()
+    else: 
+        swap_to_profile(profile_to_swap_to)
+    
+if __name__ == "__main__":
+    main()
