@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Pyhton Script to swap AWS Profile configs
+# Python Script to swap AWS Profile configs
 
 # Assumes that credentials file is at 
 # and follows this pattern:
