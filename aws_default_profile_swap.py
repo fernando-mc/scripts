@@ -14,36 +14,59 @@
 # aws-secret-thing: secretythingsad7uy23hjeasd8uhi2jawd
 
 import argparse
+import os
+
+home_dir = os.getenv("HOME")
 
 parser = argparse.ArgumentParser()
 parser.add_argument("profile", help="profile to set as default")
-args = parser.parse_args()
 
+args = parser.parse_args()
 profile_to_swap_to = args.profile
 
-count_one = 0
-count_two = 0
+profile_to_swap_to
 
-print 'Swapping to: ' + profile_to_swap_to
+# Read the current credentials file
+with open(home_dir + '/.aws/credentials', 'r') as curr_creds:
+    curr_creds_lines = curr_creds.readlines()
+    # If no backup exists make one from the exisiting,
+    # just in case formatting is ikky and something breaks
+    if not os.path.exists(home_dir + '/.aws/credentials_backup'):
+        with open(home_dir + '/.aws/credentials_backup', 'w') as backup_file:
+            for line in curr_creds_lines:
+                backup_file.write(line)
 
-with open('~/.aws/credentials', 'r') as file:
-    lines = file.readlines()
-    # Find creds to set as default
-    for i in lines:
-        if i == '[' + profile_to_swap_to + ']\n':
-            access_key_id = lines[count_one + 1]
-            secret_key = lines[count_one + 2]
-        count_one += 1
-
-with open('~/.aws/credentials', 'wr') as file:
-    # Find line numbers of default to overwrite
-    for line in lines:
-        if line == '[default]\n':
-            file.write('[default]\n')
-        elif lines[count_two - 1] == '[default]\n':
-            file.write(access_key_id)
-        elif lines[count_two - 2] == '[default]\n':
-            file.write(secret_key)
-        else:
-            file.write(line)
-        count_two += 1
+# If passed in the "restore" arg
+# Restore the credentials from the backup
+if profile_to_swap_to == 'restore':
+    print 'restoring from credentials_backup'
+    with open(home_dir + '/.aws/credentials_backup', 'r') as backup_file:
+        backup_file_creds_lines = backup_file.readlines()
+        with open(home_dir + '/.aws/credentials', 'w') as curr_creds:
+            for line in backup_file_creds_lines:
+                curr_creds.write(line)
+else:
+    print 'Swapping to: ' + profile_to_swap_to
+    # Otherwise just swap the profile to the requested one
+    # Read through the file for the profile to swap to
+    with open(home_dir + '/.aws/credentials', 'r') as curr_creds:
+        curr_creds_lines = curr_creds.readlines()
+        # Go through and find the creds to swap to
+        for line in curr_creds_lines:
+            if line == '[' + profile_to_swap_to + ']\n':
+                access_key_id = curr_creds_lines[curr_creds_lines.index(line) + 1]
+                secret_key = curr_creds_lines[curr_creds_lines.index(line) + 2]
+    # Using the lines from the read write over the old file with new default
+    with open(home_dir + '/.aws/credentials', 'w') as curr_creds:
+        # Find line numbers of default to overwrite
+        count = 0
+        for line in curr_creds_lines:
+            if line == '[default]\n':
+                curr_creds.write('[default]\n')
+            elif curr_creds_lines[count - 1] == '[default]\n':
+                curr_creds.write(access_key_id)
+            elif curr_creds_lines[count - 2] == '[default]\n':
+                curr_creds.write(secret_key)
+            else:
+                curr_creds.write(line)
+            count += 1
