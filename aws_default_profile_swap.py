@@ -8,7 +8,7 @@ import ConfigParser
 import os
 
 Config = ConfigParser.ConfigParser()
-Config.read('credentials')
+Config.read(os.path.expanduser('~/.aws/credentials'))
 
 def get_profile_to_swap_to():
     """Parse the profile requested from user input"""
@@ -36,7 +36,7 @@ def swap_profile(profile_to_swap_to):
     secret = Config.get(profile_to_swap_to, 'aws_secret_access_key')
     Config.set('default', 'aws_access_key_id', key)
     Config.set('default', 'aws_secret_access_key', secret)
-    with open('credentials', 'wb') as configfile:
+    with open(os.path.expanduser('~/.aws/credentials'), 'wb') as configfile:
         Config.write(configfile)
 
 def main():
