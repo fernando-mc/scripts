@@ -1,13 +1,13 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # Python Script to swap AWS Profile configs
 
 # Assumes that credentials file is at ~/.aws/credentials
 
 import argparse
-import ConfigParser
+import configparser
 import os
 
-Config = ConfigParser.ConfigParser()
+Config = configparser.ConfigParser()
 Config.read(os.path.expanduser('~/.aws/credentials'))
 
 def get_profile_to_swap_to():
@@ -36,13 +36,13 @@ def swap_profile(profile_to_swap_to):
     secret = Config.get(profile_to_swap_to, 'aws_secret_access_key')
     Config.set('default', 'aws_access_key_id', key)
     Config.set('default', 'aws_secret_access_key', secret)
-    with open(os.path.expanduser('~/.aws/credentials'), 'wb') as configfile:
+    with open(os.path.expanduser('~/.aws/credentials'), 'w') as configfile:
         Config.write(configfile)
 
 def main():
     profile = get_profile_to_swap_to()
     swap_profile(profile)
-    print 'Swapped to profile: {0}'.format(profile)
+    print('Swapped to profile: {0}'.format(profile))
 
 if __name__ == "__main__":
     main()
